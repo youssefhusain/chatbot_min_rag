@@ -11,6 +11,7 @@ from routes.base import base_router
 import pytest
 
 
+
 app = FastAPI()
 app.include_router(base_router)
 client = TestClient(app)
@@ -29,3 +30,4 @@ def test_welcome():
     data = response.json()
     assert data["app_name"] == "TestApp"
     assert data["app_version"] == "1.0.0"
+
