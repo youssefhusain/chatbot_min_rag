@@ -1,13 +1,18 @@
+import sys
 import os
-import pytest
+
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
-from src.routes.base import base_router
+from routes.base import base_router 
+
+import pytest
+
+
 app = FastAPI()
 app.include_router(base_router)
-
 client = TestClient(app)
 
 @pytest.fixture(autouse=True)
@@ -24,5 +29,3 @@ def test_welcome():
     data = response.json()
     assert data["app_name"] == "TestApp"
     assert data["app_version"] == "1.0.0"
-
-
