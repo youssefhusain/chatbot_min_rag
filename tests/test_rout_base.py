@@ -1,66 +1,56 @@
-import sys
-import os
-import types
+# tests/test_upload_data.py
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from unittest.mock import AsyncMock, MagicMock, patch
+from fastapi.responses import JSONResponse
+from starlette import status
+
+from routes.data import upload_data
+from models import ResponseSignal
 
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+@pytest.mark.asyncio
+async def test_upload_data_success(tmp_path):
+    mock_file = AsyncMock()
+    mock_file.filename = "test.txt"
+    mock_file.read = AsyncMock(side_effect=[b"some content", b""])
+
+    mock_settings = MagicMock()
+    mock_settings.FILE_DEFAULT_CHUNK_SIZE = 1024
+
+    with patch("routes.data.DataController") as MockDataController, \
+         patch("routes.data.ProjectController") as MockProjectController, \
+         patch("aiofiles.open", AsyncMock()):
+        
+        # إعداد الـ mocks
+        mock_data_ctrl = MockDataController.return_value
+        mock_data_ctrl.validate_uploaded_file.return_value = (True, None)
+        mock_data_ctrl.generate_unique_filepath.return_value = (tmp_path / "test.txt", "file123")
+
+        MockProjectController.return_value.get_project_path.return_value = str(tmp_path)
+
+        response = await upload_data("project1", mock_file, app_settings=mock_settings)
+
+        assert isinstance(response, JSONResponse)
+        assert response.status_code == status.HTTP_200_OK
+        body = response.body.decode()
+        assert ResponseSignal.FILE_UPLOAD_SUCCESS.value in body
+        assert "file123" in body
 
 
-fake_controllers = types.ModuleType("controllers")
+@pytest.mark.asyncio
+async def test_upload_data_invalid_file():
+    mock_file = AsyncMock()
+    mock_file.filename = "bad.txt"
 
-class FakeDataController:
-    def validate_uploaded_file(self, file):
-        return True, "OK"
-    def generate_unique_filepath(self, orig_file_name, project_id):
-        return f"/tmp/{orig_file_name}", "fake_file_id"
+    mock_settings = MagicMock()
 
-class FakeProjectController:
-    def get_project_path(self, project_id):
-        return "/tmp"
+    with patch("routes.data.DataController") as MockDataController:
+        mock_data_ctrl = MockDataController.return_value
+        mock_data_ctrl.validate_uploaded_file.return_value = (False, ResponseSignal.FILE_UPLOAD_FAILED.value)
 
-fake_controllers.DataController = FakeDataController
-fake_controllers.ProjectController = FakeProjectController
+        response = await upload_data("project1", mock_file, app_settings=mock_settings)
 
-sys.modules["controllers"] = fake_controllers
+        assert isinstance(response, JSONResponse)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert ResponseSignal.FILE_UPLOAD_FAILED.value in response.body.decode()
 
-
-from routes.data import data_router
-from helpers.config import Settings, get_settings
-
-app = FastAPI()
-app.include_router(data_router)
-client = TestClient(app)
-
-@pytest.fixture(autouse=True)
-def override_settings():
-    def _override():
-        return Settings(
-            APP_NAME="TestApp",
-            APP_VERSION="1.0.0",
-            OPENAI_API_KEY="fake",
-            FILE_ALLOWED_TYPES=[".txt"],
-            FILE_MAX_SIZE=5_000_000,
-            FILE_DEFAULT_CHUNK_SIZE=1024
-        )
-    app.dependency_overrides[get_settings] = _override
-    yield
-    app.dependency_overrides.clear()
-
-def test_upload_data(tmp_path):
-    file_content = b"hello world"
-    test_file = tmp_path / "test.txt"
-    test_file.write_bytes(file_content)
-
-    with open(test_file, "rb") as f:
-        response = client.post(
-            "/api/v1/data/upload/123",
-            files={"file": ("test.txt", f, "text/plain")}
-        )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["signal"] == "FILE_UPLOAD_SUCCESS" or data["signal"] == "OK"
-    assert "file_id" in data
