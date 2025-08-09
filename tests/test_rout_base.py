@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from fastapi.responses import JSONResponse
 from starlette import status
 
-# نضيف src للمسار عشان الاستيرادات تشتغل
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 from routes.data import data_router
@@ -98,3 +98,4 @@ def test_upload_data_exception_during_write(tmp_path):
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         data = response.json()
         assert data["signal"] == ResponseSignal.FILE_UPLOAD_FAILED.value
+
