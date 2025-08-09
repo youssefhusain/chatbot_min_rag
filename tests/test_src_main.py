@@ -1,22 +1,24 @@
-from fastapi.testclient import TestClient
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from src.main import app
-from src.helpers.config import Settings
-from src.routers.base import welcome
+from fastapi.testclient import TestClient
+import os
 
-def override_get_settings():
-    return Settings(
-        APP_NAME="Test App",
-        APP_VERSION="1.0.0",
-        OPENAI_API_KEY="test-key",
-        FILE_ALLOWED_TYPES="txt,pdf",
-        FILE_MAX_SIZE=1024,
-        FILE_DEFAULT_CHUNK_SIZE=256
-    )
-
-app.dependency_overrides[welcome.__defaults__[0].dependency] = override_get_settings
+os.environ["APP_NAME"] = "Test App"
+os.environ["APP_VERSION"] = "1.0.0"
+os.environ["OPENAI_API_KEY"] = "test-key"
+os.environ["FILE_ALLOWED_TYPES"] = ".txt,.pdf"
+os.environ["FILE_MAX_SIZE"] = "1024"
+os.environ["FILE_DEFAULT_CHUNK_SIZE"] = "256"
 
 client = TestClient(app)
 
 def test_welcome_endpoint():
     response = client.get("/api/v1/")
     assert response.status_code == 200
+    data = response.json()
+    assert data["app_name"] == "Test App"
+    assert data["app_version"] == "1.0.0"
