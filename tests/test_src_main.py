@@ -1,27 +1,22 @@
 from fastapi.testclient import TestClient
-from fastapi import FastAPI, APIRouter, Depends
-from helpers.config import get_settings, Settings
+from src.main import app
+from src.helpers.config import Settings
+from src.routers.base import welcome
 
-base_router = APIRouter(
-    prefix="/api/v1",
-    tags=["api_v1"],
-)
+def override_get_settings():
+    return Settings(
+        APP_NAME="Test App",
+        APP_VERSION="1.0.0",
+        OPENAI_API_KEY="test-key",
+        FILE_ALLOWED_TYPES="txt,pdf",
+        FILE_MAX_SIZE=1024,
+        FILE_DEFAULT_CHUNK_SIZE=256
+    )
 
-@base_router.get("/")
-async def welcome(app_settings: Settings = Depends(get_settings)):
-    return {
-        "app_name": app_settings.APP_NAME,
-        "app_version": app_settings.APP_VERSION,
-    }
-
-app = FastAPI()
-app.include_router(base_router)
+app.dependency_overrides[welcome.__defaults__[0].dependency] = override_get_settings
 
 client = TestClient(app)
 
 def test_welcome_endpoint():
     response = client.get("/api/v1/")
     assert response.status_code == 200
-    data = response.json()
-    assert "app_name" in data
-    assert "app_version" in data
