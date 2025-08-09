@@ -1,4 +1,3 @@
-# tests/test_upload_data.py
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.responses import JSONResponse
@@ -21,7 +20,6 @@ async def test_upload_data_success(tmp_path):
          patch("routes.data.ProjectController") as MockProjectController, \
          patch("aiofiles.open", AsyncMock()):
         
-        # إعداد الـ mocks
         mock_data_ctrl = MockDataController.return_value
         mock_data_ctrl.validate_uploaded_file.return_value = (True, None)
         mock_data_ctrl.generate_unique_filepath.return_value = (tmp_path / "test.txt", "file123")
@@ -54,3 +52,31 @@ async def test_upload_data_invalid_file():
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert ResponseSignal.FILE_UPLOAD_FAILED.value in response.body.decode()
 
+
+@pytest.mark.asyncio
+async def test_upload_data_exception_during_write(tmp_path):
+    mock_file = AsyncMock()
+    mock_file.filename = "test.txt"
+    mock_file.read = AsyncMock(side_effect=[b"data", b""])
+
+    mock_settings = MagicMock()
+    mock_settings.FILE_DEFAULT_CHUNK_SIZE = 1024
+
+    async def mock_open(*args, **kwargs):
+        raise IOError("Disk error")
+
+    with patch("routes.data.DataController") as MockDataController, \
+         patch("routes.data.ProjectController") as MockProjectController, \
+         patch("aiofiles.open", side_effect=mock_open):
+        
+        mock_data_ctrl = MockDataController.return_value
+        mock_data_ctrl.validate_uploaded_file.return_value = (True, None)
+        mock_data_ctrl.generate_unique_filepath.return_value = (tmp_path / "test.txt", "file123")
+
+        MockProjectController.return_value.get_project_path.return_value = str(tmp_path)
+
+        response = await upload_data("project1", mock_file, app_settings=mock_settings)
+
+        assert isinstance(response, JSONResponse)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert ResponseSignal.FILE_UPLOAD_FAILED.value in response.body.decode()
