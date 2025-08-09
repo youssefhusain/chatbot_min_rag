@@ -19,7 +19,14 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def override_get_settings():
     def _override_settings():
-        return Settings(APP_NAME="TestApp", APP_VERSION="1.0.0")
+        return Settings(
+            APP_NAME="TestApp",
+            APP_VERSION="1.0.0",
+            OPENAI_API_KEY="fake_key",
+            FILE_ALLOWED_TYPES=[".txt", ".pdf"],
+            FILE_MAX_SIZE=5_000_000,
+            FILE_DEFAULT_CHUNK_SIZE=1024
+        )
     app.dependency_overrides[get_settings] = _override_settings
     yield
     app.dependency_overrides.clear()
@@ -31,4 +38,3 @@ def test_welcome():
     data = response.json()
     assert data["app_name"] == "TestApp"
     assert data["app_version"] == "1.0.0"
-
