@@ -5,9 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.main import app
 from fastapi.testclient import TestClient
-data={}
-data["app_name"] == "Test App"
-data["app_version"] == "1.0.0"
+
 os.environ["APP_NAME"] = "Test App"
 os.environ["APP_VERSION"] = "1.0.0"
 os.environ["OPENAI_API_KEY"] = "test-key"
@@ -22,6 +20,6 @@ client = TestClient(app)
 
 def test_welcome_endpoint():
 
-    assert data["app_name"] == "Test App"
-    assert data["app_version"] == "1.0.0"
+    assert os.environ["app_name"] == "Test App"
+    assert os.environ["app_version"] == "1.0.0"
 
