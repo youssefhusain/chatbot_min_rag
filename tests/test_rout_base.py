@@ -1,14 +1,15 @@
 import sys
 import os
 
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from routes.base import base_router
 from helpers.config import Settings, get_settings
 
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 app = FastAPI()
 app.include_router(base_router)
