@@ -31,3 +31,4 @@ def test_welcome():
     data = response.json()
     assert data["app_name"] == "TestApp"
     assert data["app_version"] == "1.0.0"
+
