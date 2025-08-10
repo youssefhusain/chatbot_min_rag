@@ -40,6 +40,7 @@ sys.modules["controllers"] = fake_controllers
 
 from routes.data import data_router
 from helpers.config import Settings, get_settings
+from models import ResponseSignal
 
 app = FastAPI()
 app.include_router(data_router)
@@ -73,11 +74,11 @@ def test_upload_data_success(tmp_path):
 
     assert response.status_code == 200
     data = response.json()
-    assert data["signal"].upper() == "FILE_UPLOAD_SUCCESS"
+    assert data["signal"] == ResponseSignal.FILE_UPLOAD_SUCCESS.value
     assert data["file_id"] == "fake_file_id"
 
 def test_upload_data_invalid_file(tmp_path):
-    fake_controllers.DataController.validate_uploaded_file = lambda self, file: (False, "INVALID_FILE")
+    fake_controllers.DataController.validate_uploaded_file = lambda self, file: (False, ResponseSignal.INVALID_FILE.value)
 
     test_file = tmp_path / "bad.txt"
     test_file.write_bytes(b"bad content")
@@ -90,7 +91,7 @@ def test_upload_data_invalid_file(tmp_path):
 
     assert response.status_code == 400
     data = response.json()
-    assert data["signal"] == "INVALID_FILE"
+    assert data["signal"] == ResponseSignal.INVALID_FILE.value
 
 def test_process_endpoint_success():
     payload = {
@@ -106,7 +107,7 @@ def test_process_endpoint_success():
     assert data[0]["chunk"] == "part1"
 
 def test_process_endpoint_failed():
-
+    # نخلي الـ process_file_content ترجع None
     fake_controllers.ProcessController.process_file_content = lambda *args, **kwargs: None
 
     payload = {
@@ -117,4 +118,4 @@ def test_process_endpoint_failed():
     response = client.post("/api/v1/data/process/123", json=payload)
     assert response.status_code == 400
     data = response.json()
-    assert data["signal"] == "PROCESSING_FAILED"
+    assert data["signal"] == ResponseSignal.PROCESSING_FAILED.value
