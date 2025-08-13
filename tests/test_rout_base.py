@@ -24,11 +24,14 @@ def override_get_settings():
             OPENAI_API_KEY="fake_key",
             FILE_ALLOWED_TYPES=[".txt", ".pdf"],
             FILE_MAX_SIZE=5_000_000,
-            FILE_DEFAULT_CHUNK_SIZE=1024
+            FILE_DEFAULT_CHUNK_SIZE=1024,
+            MONGODB_URL="mongodb://localhost:27017", 
+            MONGODB_DATABASE="test_db"              
         )
     app.dependency_overrides[get_settings] = _override_settings
     yield
     app.dependency_overrides.clear()
+
 
 
 def test_welcome():
@@ -38,3 +41,4 @@ def test_welcome():
     assert data["app_name"] == "TestApp"
     assert data["app_version"] == "1.0.0"
     
+
